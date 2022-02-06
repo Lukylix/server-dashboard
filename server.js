@@ -30,9 +30,8 @@ const io = require("socket.io")(server, {
 });
 
 cpuPercentsCache = [];
-
 setInterval(() => {
-	// 2. every second, emit a 'cpu' event to user
+	// Every second, emit a 'cpu' event to user
 	si.currentLoad().then((data) => {
 		cpuPercent = data.currentLoad;
 		const formatedData = {
@@ -48,7 +47,7 @@ setInterval(() => {
 		cpuPercentsCache.push(cpuPercent);
 		io.sockets.in("cpu").emit("cpu", formatedData);
 	});
-	if (io.sockets.adapter.rooms.get("cpu")?.size > 0) {
+	if (io.sockets.adapter.rooms.get("cpuInfo")?.size > 0) {
 		si.cpu().then((data) => {
 			si.cpuCurrentSpeed().then((data2) => {
 				si.processes().then((data3) => {
@@ -67,6 +66,11 @@ setInterval(() => {
 			io.sockets.in("network").emit("network", data);
 		});
 	}
+	if (io.sockets.adapter.rooms.get("diskIO")?.size > 0) {
+		si.disksIO().then((data) => {
+			io.sockets.in("diskIO").emit("diskIO", data);
+		});
+	}
 }, 1000);
 
 // 1. listen for socket connections
@@ -76,6 +80,10 @@ io.on("connection", (client) => {
 		if (room === "cpu") client.emit("cpuBase", cpuPercentsCache);
 
 		client.join(room);
+	});
+	client.on("unsubscribe", function (room) {
+		console.log("Leaving room", room);
+		client.leave(room);
 	});
 });
 

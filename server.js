@@ -22,6 +22,17 @@ app.get("/disks", (req, res) => {
 	si.fsSize().then((data) => res.send(data));
 });
 
+app.get("/iswsl", (req, res) => {
+	fs.readFile("/proc/version", "utf8", (err, data) => {
+		if (err) console.error(err);
+		if (data.includes("Microsoft")) {
+			res.send({ isWsl: true });
+		} else {
+			res.send({ isWsl: false });
+		}
+	});
+});
+
 /*
   Socket.io
 */

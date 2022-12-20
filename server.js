@@ -1,13 +1,15 @@
-const server = require("http").createServer();
-const cors = require("cors");
+import fs from "fs";
+import express from "express";
+import http from "http";
+import cors from "cors";
+import si from "systeminformation";
+import isDocker from "is-docker";
+import { Server as socketIOServer } from "socket.io";
 
-const si = require("systeminformation");
-
-const express = require("express");
 const app = express();
+const server = http.createServer(app);
 
 const PORT = process.env.PORT || 8080;
-const PORTIO = process.env.PORTIO || 3001;
 
 /*
   Express
@@ -25,26 +27,27 @@ app.get("/disks", (req, res) => {
 app.get("/iswsl", (req, res) => {
 	fs.readFile("/proc/version", "utf8", (err, data) => {
 		if (err) console.error(err);
-		if (data.includes("Microsoft")) {
-			res.send({ isWsl: true });
-		} else {
-			res.send({ isWsl: false });
-		}
+		if (data.match(/Microsoft/gi)) return res.send({ isWsl: true });
+		res.send({ isWsl: false });
 	});
+});
+
+app.get("/isdocker", (req, res) => {
+	res.send({ isDocker: isDocker() });
 });
 
 /*
   Socket.io
 */
-const io = require("socket.io")(server, {
+const io = new socketIOServer(server, {
 	transports: ["websocket", "polling"],
 });
 
-cpuPercentsCache = [];
+let cpuPercentsCache = [];
 setInterval(() => {
 	// Every second, emit a 'cpu' event to user
 	si.currentLoad().then((data) => {
-		cpuPercent = data.currentLoad;
+		const cpuPercent = data.currentLoad;
 		const formatedData = {
 			totalLoad: data.currentLoad,
 			cpus: [],
@@ -98,5 +101,4 @@ io.on("connection", (client) => {
 	});
 });
 
-server.listen(PORTIO, console.log(`Socket.io listening on http://localhost:${PORTIO}`));
-app.listen(PORT, console.log(`Express listening on http://localhost:${PORT}`));
+server.listen(PORT, console.log(`Server listening on port ${PORT}`));
